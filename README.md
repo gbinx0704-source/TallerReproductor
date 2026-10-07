@@ -1,32 +1,23 @@
-# React + TypeScript + Vite
+# Sonora
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Sonora is a browser-based personal audio player for music files stored on your computer or phone. It does not stream from a catalog or upload your audio to a server.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Open the local URL printed by Vite. For a production build, run `npm run build`; run the unit tests with `npx vitest run` and lint with `npm run lint`.
+
+## Use
+
+- Select **Add music** or drop audio files onto the page to import them.
+- Imported audio and track details are stored in the browser's IndexedDB and remain available in that browser profile.
+- Play complete local tracks, seek through them, adjust volume, and move through the doubly linked library in either direction.
+- Search by title, artist, or filename. Press `/` to focus search and `Escape` to clear it.
+- Save favorites, shuffle playback, and choose repeat off, repeat all, or repeat one.
+- Remove tracks from the local library with the delete control.
+
+The browser must support the selected audio format and have enough local storage available. Clearing site data removes the saved library. Files are read locally and are not sent to a remote service.
