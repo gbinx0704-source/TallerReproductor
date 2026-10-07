@@ -11,6 +11,10 @@ npm run dev
 
 Open the local URL printed by Vite. For a production build, run `npm run build`; run the unit tests with `npx vitest run` and lint with `npm run lint`.
 
+## Deploy
+
+The `Deploy to GitHub Pages` workflow publishes the `main` branch to `https://gbinx0704-source.github.io/TallerReproductor/`. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. The workflow runs on every push to `main`.
+
 ## Use
 
 - Select **Add music** or drop audio files onto the page to import them.

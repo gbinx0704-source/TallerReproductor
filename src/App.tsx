@@ -335,7 +335,7 @@ function App() {
             <div className="track-total"><span>{tracks.length.toString().padStart(2, '0')}</span><small>TRACKS<br />IN YOUR LIBRARY</small></div>
           </section>
 
-          <section className="featured-panel" aria-label="Now playing">
+          <section className={currentTrack && isPlaying ? 'featured-panel is-playing' : 'featured-panel'} aria-label="Now playing">
             <div className="featured-copy">
               <p className="eyebrow">{currentTrack ? 'NOW PLAYING' : 'YOUR LISTENING ROOM'}</p>
               <h2>{currentTrack?.title ?? 'Make room for a good song.'}</h2>
