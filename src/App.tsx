@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AudioLines,
+  Compass,
   Disc3,
+  ExternalLink,
   Heart,
   ListMusic,
   Music2,
@@ -20,13 +22,16 @@ import {
 } from 'lucide-react'
 import { DoublyLinkedList, type DoublyLinkedListNode } from './domain/DoublyLinkedList'
 import type { StoredTrack, Track } from './domain/Track'
+import type { YouTubeVideo } from './domain/YouTubeVideo'
 import { TrackLibrary, trackFromFile } from './services/TrackLibrary'
+import { YouTubeCatalog } from './services/YouTubeCatalog'
 import './App.css'
 
 type RepeatMode = 'off' | 'all' | 'one'
-type LibraryView = 'all' | 'favorites'
+type LibraryView = 'all' | 'favorites' | 'online'
 
 const library = new TrackLibrary()
+const youTubeCatalog = new YouTubeCatalog()
 const acceptedAudioTypes = 'audio/*,.mp3,.m4a,.wav,.ogg,.flac,.aac,.opus'
 
 function pickRandomIndex(length: number): number {
@@ -50,6 +55,10 @@ function App() {
     }
   })
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
+  const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null)
+  const [onlineResults, setOnlineResults] = useState<YouTubeVideo[]>([])
+  const [isOnlineLoading, setIsOnlineLoading] = useState(false)
+  const [onlineError, setOnlineError] = useState('')
   const [view, setView] = useState<LibraryView>('all')
   const [search, setSearch] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
@@ -72,13 +81,41 @@ function App() {
   const visibleTracks = useMemo(() => {
     const query = search.trim().toLocaleLowerCase()
     return tracks.filter((track) => {
-      const matchesView = view === 'all' || favoriteIds.has(track.id)
+      const matchesView = view === 'all' || (view === 'favorites' && favoriteIds.has(track.id))
       const matchesSearch = !query || `${track.title} ${track.artist} ${track.fileName}`
         .toLocaleLowerCase()
         .includes(query)
       return matchesView && matchesSearch
     })
   }, [favoriteIds, search, tracks, view])
+
+  useEffect(() => {
+    if (view !== 'online') return
+    const query = search.trim()
+    if (query.length < 2) return
+
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => {
+      setIsOnlineLoading(true)
+      setOnlineError('')
+      youTubeCatalog.search(query, controller.signal)
+        .then(setOnlineResults)
+        .catch((reason: unknown) => {
+          if (!controller.signal.aborted) {
+            setOnlineResults([])
+            setOnlineError(reason instanceof Error ? reason.message : 'YouTube search is temporarily unavailable.')
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setIsOnlineLoading(false)
+        })
+    }, 350)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [search, view])
 
   useEffect(() => {
     let active = true
@@ -100,6 +137,15 @@ function App() {
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!selectedVideo) return
+    function closeVideoOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setSelectedVideo(null)
+    }
+    window.addEventListener('keydown', closeVideoOnEscape)
+    return () => window.removeEventListener('keydown', closeVideoOnEscape)
+  }, [selectedVideo])
 
   useEffect(() => {
     const queue = new DoublyLinkedList<Track>()
@@ -180,6 +226,20 @@ function App() {
       setIsPlaying(false)
       setError('Playback could not start. Try pressing play again.')
     }
+  }
+
+  function watchVideo(video: YouTubeVideo) {
+    const audio = audioRef.current
+    audio?.pause()
+    audio?.removeAttribute('src')
+    audio?.load()
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    objectUrlRef.current = ''
+    setCurrentTrack(null)
+    setIsPlaying(false)
+    setCurrentTime(0)
+    setDuration(0)
+    setSelectedVideo(video)
   }
 
   function togglePlayback() {
@@ -291,11 +351,21 @@ function App() {
         </a>
         <p className="nav-label">YOUR SPACE</p>
         <nav className="primary-nav" aria-label="Library navigation">
-          <button className={view === 'all' ? 'nav-item active' : 'nav-item'} onClick={() => setView('all')}>
-            <Disc3 size={18} /><span>My library</span><span className="nav-count">{tracks.length}</span>
+          <button aria-label="My library" className={view === 'all' ? 'nav-item active' : 'nav-item'} onClick={() => setView('all')}>
+            <Disc3 size={18} /><span className="nav-item-label">My library</span><span className="nav-count">{tracks.length}</span>
           </button>
-          <button className={view === 'favorites' ? 'nav-item active' : 'nav-item'} onClick={() => setView('favorites')}>
-            <Heart size={18} /><span>Favorites</span><span className="nav-count">{favoriteIds.size}</span>
+          <button aria-label="Favorites" className={view === 'favorites' ? 'nav-item active' : 'nav-item'} onClick={() => setView('favorites')}>
+            <Heart size={18} /><span className="nav-item-label">Favorites</span><span className="nav-count">{favoriteIds.size}</span>
+          </button>
+          <button aria-label="Discover online" className={view === 'online' ? 'nav-item active' : 'nav-item'} onClick={() => {
+            setView('online')
+            if (search.trim().length >= 2) {
+              setOnlineResults([])
+              setOnlineError('')
+              setIsOnlineLoading(true)
+            }
+          }}>
+            <Compass size={18} /><span className="nav-item-label">Discover</span>
           </button>
         </nav>
 
@@ -320,7 +390,15 @@ function App() {
 
       <main className="main-content" id="home">
         <header className="topbar">
-          <div className="search-box"><Search size={17} /><input ref={searchInputRef} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search your music" aria-label="Search your music" /><kbd>/</kbd></div>
+          <div className="search-box"><Search size={17} /><input ref={searchInputRef} value={search} onChange={(event) => {
+            const value = event.target.value
+            setSearch(value)
+            if (view === 'online') {
+              setOnlineResults([])
+              setOnlineError('')
+              setIsOnlineLoading(value.trim().length >= 2)
+            }
+          }} placeholder={view === 'online' ? 'Search YouTube music' : 'Search your music'} aria-label={view === 'online' ? 'Search YouTube music' : 'Search your music'} /><kbd>/</kbd></div>
           <button className="add-button" onClick={() => inputRef.current?.click()}><Upload size={16} /><span>Add music</span></button>
           <input ref={inputRef} className="visually-hidden" type="file" accept={acceptedAudioTypes} multiple onChange={(event) => event.target.files && void importFiles(event.target.files)} />
         </header>
@@ -329,8 +407,8 @@ function App() {
           <section className="welcome-row">
             <div>
               <p className="eyebrow">A HOME FOR YOUR SOUND</p>
-              <h1>{view === 'favorites' ? 'The ones you love.' : 'Your music, in full.'}</h1>
-              <p className="welcome-copy">A personal listening space, made from the music you already have.</p>
+              <h1>{view === 'online' ? 'Find your next song.' : view === 'favorites' ? 'The ones you love.' : 'Your music, in full.'}</h1>
+              <p className="welcome-copy">{view === 'online' ? 'Search music videos and play them here with YouTube.' : 'A personal listening space, made from the music you already have.'}</p>
             </div>
             <div className="track-total"><span>{tracks.length.toString().padStart(2, '0')}</span><small>TRACKS<br />IN YOUR LIBRARY</small></div>
           </section>
@@ -351,13 +429,37 @@ function App() {
 
           <section className="library-section">
             <div className="section-heading">
-              <div><p className="eyebrow">THE COLLECTION</p><h2>{view === 'favorites' ? 'Favorites' : 'Your library'}</h2></div>
+              <div><p className="eyebrow">{view === 'online' ? 'VIDEO DISCOVERY' : 'THE COLLECTION'}</p><h2>{view === 'online' ? 'Search YouTube' : view === 'favorites' ? 'Favorites' : 'Your library'}</h2></div>
               <button className="text-button" onClick={() => inputRef.current?.click()}><Upload size={15} /> Add tracks</button>
             </div>
 
             {error && <div className="error-banner" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss message"><X size={16} /></button></div>}
 
-            {isLoading ? <div className="loading-state">Opening your local library...</div> : visibleTracks.length ? (
+            {view === 'online' ? (
+              onlineError ? (
+                <div className="empty-state online-empty"><div className="empty-icon"><Compass size={25} /></div><h3>Online search unavailable</h3><p>{onlineError}</p></div>
+              ) : search.trim().length < 2 ? (
+                <div className="empty-state online-empty"><div className="empty-icon"><Search size={25} /></div><h3>Search the music video catalog</h3><p>Enter at least two characters to find videos that can play here.</p></div>
+              ) : isOnlineLoading ? (
+                <div className="loading-state">Searching YouTube...</div>
+              ) : onlineResults.length ? (
+                <div className="video-grid">
+                  {onlineResults.map((video) => (
+                    <article className="video-result" key={video.id}>
+                      <button className="video-thumbnail" aria-label={`Play ${video.title}`} onClick={() => watchVideo(video)}>
+                        {video.thumbnailUrl && <img src={video.thumbnailUrl} alt="" loading="lazy" />}
+                        <span className="video-play-icon"><Play size={21} fill="currentColor" /></span>
+                        <span className="video-source-label">YOUTUBE</span>
+                      </button>
+                      <div className="video-result-copy"><strong title={video.title}>{video.title}</strong><span>{video.channelTitle}</span></div>
+                      <button className="video-watch-button" onClick={() => watchVideo(video)}><Play size={14} fill="currentColor" /> Watch video</button>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state online-empty"><div className="empty-icon"><Search size={25} /></div><h3>No videos found</h3><p>Try another song, artist, or spelling.</p></div>
+              )
+            ) : isLoading ? <div className="loading-state">Opening your local library...</div> : visibleTracks.length ? (
               <div className="track-table-wrap">
                 <div className="track-table-header"><span className="track-number">#</span><span>TITLE</span><span>FILE</span><span>ADDED</span><span aria-hidden="true" /></div>
                 <div className="track-table">
@@ -409,29 +511,51 @@ function App() {
       <footer className="player-bar">
         <div className="player-track">
           <span className="player-cover"><Music2 size={19} /></span>
-          <div className="player-track-copy"><strong>{currentTrack?.title ?? 'Nothing playing'}</strong><span>{currentTrack?.artist ?? 'Pick a song to begin'}</span></div>
+          <div className="player-track-copy"><strong>{selectedVideo?.title ?? currentTrack?.title ?? 'Nothing playing'}</strong><span>{selectedVideo ? `${selectedVideo.channelTitle} · YouTube` : currentTrack?.artist ?? 'Pick a song to begin'}</span></div>
           {currentTrack && <button className={favoriteIds.has(currentTrack.id) ? 'icon-button favorite selected' : 'icon-button favorite'} aria-label="Toggle favorite" onClick={() => toggleFavorite(currentTrack)}><Heart size={17} fill={favoriteIds.has(currentTrack.id) ? 'currentColor' : 'none'} /></button>}
         </div>
 
         <div className="player-center">
           <div className="player-controls">
-            <button className={isShuffle ? 'control-button active-control' : 'control-button'} aria-label="Toggle shuffle" title="Shuffle" onClick={() => setIsShuffle((current) => !current)}><Shuffle size={17} /></button>
-            <button className="control-button skip-button" aria-label="Previous track" title="Previous track" onClick={() => skip('previous')} disabled={!tracks.length}><SkipBack size={19} fill="currentColor" /></button>
-            <button className="main-play" aria-label={isPlaying ? 'Pause' : 'Play'} onClick={togglePlayback}><span>{isPlaying ? <Pause size={19} fill="currentColor" /> : <Play size={19} fill="currentColor" />}</span></button>
-            <button className="control-button skip-button" aria-label="Next track" title="Next track" onClick={() => skip('next')} disabled={!tracks.length}><SkipForward size={19} fill="currentColor" /></button>
-            <button className={repeatMode !== 'off' ? 'control-button active-control' : 'control-button'} aria-label={`Repeat ${repeatMode}`} title={`Repeat ${repeatMode}`} onClick={cycleRepeat}>{repeatMode === 'one' ? <Repeat1 size={17} /> : <Repeat size={17} />}</button>
+            <button className={isShuffle ? 'control-button active-control' : 'control-button'} aria-label="Toggle shuffle" title="Shuffle" onClick={() => setIsShuffle((current) => !current)} disabled={Boolean(selectedVideo)}><Shuffle size={17} /></button>
+            <button className="control-button skip-button" aria-label="Previous track" title="Previous track" onClick={() => skip('previous')} disabled={Boolean(selectedVideo) || !tracks.length}><SkipBack size={19} fill="currentColor" /></button>
+            <button className="main-play" aria-label={isPlaying ? 'Pause' : 'Play'} onClick={togglePlayback} disabled={Boolean(selectedVideo)}><span>{isPlaying ? <Pause size={19} fill="currentColor" /> : <Play size={19} fill="currentColor" />}</span></button>
+            <button className="control-button skip-button" aria-label="Next track" title="Next track" onClick={() => skip('next')} disabled={Boolean(selectedVideo) || !tracks.length}><SkipForward size={19} fill="currentColor" /></button>
+            <button className={repeatMode !== 'off' ? 'control-button active-control' : 'control-button'} aria-label={`Repeat ${repeatMode}`} title={`Repeat ${repeatMode}`} onClick={cycleRepeat} disabled={Boolean(selectedVideo)}>{repeatMode === 'one' ? <Repeat1 size={17} /> : <Repeat size={17} />}</button>
           </div>
           <div className="timeline"><span>{formatTime(currentTime)}</span><input type="range" min="0" max={duration || 0} step="0.1" value={Math.min(currentTime, duration || 0)} aria-label="Playback position" onChange={(event) => {
             const time = Number(event.target.value)
             if (audioRef.current) audioRef.current.currentTime = time
             setCurrentTime(time)
-          }} disabled={!currentTrack || !duration} /><span>{formatTime(duration)}</span></div>
+          }} disabled={Boolean(selectedVideo) || !currentTrack || !duration} /><span>{formatTime(duration)}</span></div>
         </div>
 
-        <div className="player-volume"><Volume2 size={17} /><input type="range" min="0" max="1" step="0.01" value={volume} aria-label="Volume" onChange={(event) => setVolume(Number(event.target.value))} /></div>
+        <div className="player-volume"><Volume2 size={17} /><input type="range" min="0" max="1" step="0.01" value={volume} aria-label="Volume" onChange={(event) => setVolume(Number(event.target.value))} disabled={Boolean(selectedVideo)} /></div>
       </footer>
 
       {isDragging && <div className="drop-overlay" aria-live="polite"><div className="drop-message"><Upload size={32} /><strong>Drop your music here</strong><span>Audio files will be added to your local library</span></div></div>}
+
+      {selectedVideo && (
+        <div className="video-overlay" onClick={(event) => { if (event.target === event.currentTarget) setSelectedVideo(null) }}>
+          <section className="video-dialog" role="dialog" aria-modal="true" aria-labelledby="video-dialog-title">
+            <header className="video-dialog-header">
+              <div><p className="eyebrow">NOW PLAYING ON YOUTUBE</p><h2 id="video-dialog-title">{selectedVideo.title}</h2><span>{selectedVideo.channelTitle}</span></div>
+              <a className="youtube-external" href={`https://www.youtube.com/watch?v=${encodeURIComponent(selectedVideo.id)}`} target="_blank" rel="noreferrer">Open on YouTube <ExternalLink size={14} /></a>
+              <button className="icon-button" aria-label="Close video" autoFocus onClick={() => setSelectedVideo(null)}><X size={19} /></button>
+            </header>
+            <div className="video-frame">
+              <iframe
+                key={selectedVideo.id}
+                src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(selectedVideo.id)}?autoplay=1&playsinline=1&rel=0`}
+                title={`${selectedVideo.title} by ${selectedVideo.channelTitle}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }

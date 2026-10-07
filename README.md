@@ -15,6 +15,12 @@ Open the local URL printed by Vite. For a production build, run `npm run build`;
 
 The `Deploy to GitHub Pages` workflow publishes the `main` branch to `https://gbinx0704-source.github.io/TallerReproductor/`. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. The workflow runs on every push to `main`.
 
+### YouTube search setup
+
+Enable **YouTube Data API v3** in a Google Cloud project and create a browser API key. For local development, copy `.env.example` to `.env.local` and set `VITE_YOUTUBE_API_KEY`. For GitHub Pages, add a repository Actions secret named `YOUTUBE_API_KEY`. Restrict the key to the YouTube Data API and the site's HTTP referrer (`https://gbinx0704-source.github.io/*`); add localhost referrers for development. Browser API keys are visible in a client-side app, so referrer and API restrictions are essential. Without the key, local playback still works but online search is unavailable.
+
+Online results play inside YouTube's embedded player and remain subject to YouTube availability, region, age, and embedding restrictions. Local files are not uploaded or synchronized between devices.
+
 ## Use
 
 - Select **Add music** or drop audio files onto the page to import them.
