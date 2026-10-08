@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import youtubeSearch from '../netlify/functions/youtube-search.mjs'
+import youtubeSearch from '../functions/youtube-search.mjs'
 
 describe('youtube-search function', () => {
   afterEach(() => {

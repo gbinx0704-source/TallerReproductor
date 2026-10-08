@@ -1,3 +1,4 @@
+Open the local URL printed by Vite. For a production build, run `npm run build`; run all frontend and backend tests with `npm test` and lint with `npm run lint`.
 # Sonora
 
 Sonora is a browser-based player for local audio files and YouTube music videos. Local files are read in the browser and are never uploaded to the app's server.
@@ -13,7 +14,7 @@ Copy `.env.example` to `.env.local` and add your `YOUTUBE_API_KEY` to enable onl
 
 ## Deploy with Netlify
 
-In Netlify, select **Add new site → Import an existing project**, authorize GitHub, and choose `gbinx0704-source/TallerReproductor`. Netlify reads `netlify.toml`: build command `npm run build`, publish directory `dist`, and functions directory `netlify/functions`. Set `YOUTUBE_API_KEY` in the site's environment variables with the **Functions** scope, then deploy. Connected Git deployments update automatically on pushes to `main`.
+In Netlify, select **Add new site → Import an existing project**, authorize GitHub, and choose `gbinx0704-source/TallerReproductor`. Netlify reads `netlify.toml`: build command `npm run build`, publish directory `dist`, and functions directory `backend/functions`. Set `YOUTUBE_API_KEY` in the site's environment variables with the **Functions** scope, then deploy. Connected Git deployments update automatically on pushes to `main`.
 
 ### YouTube search setup
 
@@ -35,9 +36,7 @@ The browser must support the selected audio format and have enough local storage
 
 ## Project structure
 
-- `src/app/` contains the app shell and app-level styling; `src/main.tsx` is the entry point.
-- `src/domain/entities/`, `src/domain/collections/`, and `src/domain/settings/` contain models, the doubly linked list, and playback settings.
-- `src/features/` separates discovery, library, player, and playlist interface components.
-- `src/services/storage/` owns browser IndexedDB persistence; `src/services/catalog/` calls the online catalog endpoint.
-- `netlify/functions/` contains the server-side YouTube search endpoint. Its API key stays in Netlify environment variables.
-- `src/app/App.tsx` coordinates feature state and navigation; `src/app/App.css` and `src/styles/index.css` define the light visual system.
+- `frontend/` contains the Vite application: `frontend/src/app/` coordinates app state, `frontend/src/features/` groups UI by feature, `frontend/src/domain/` contains models and the doubly linked list, and `frontend/src/services/` handles storage and catalog access.
+- `frontend/src/main.tsx` is the frontend entry point; `frontend/src/styles/` contains global styles.
+- `backend/functions/` contains the server-side YouTube search endpoint. Its API key stays in Netlify environment variables; `backend/tests/` tests the function.
+- Root configuration files (`package.json`, `vite.config.ts`, `tsconfig*.json`, and `netlify.toml`) coordinate build, typechecking, and deployment.
