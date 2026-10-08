@@ -1,5 +1,5 @@
-import type { PlaylistRecord } from '../../domain/Playlist'
-import type { StoredTrack, Track } from '../../domain/Track'
+import type { PlaylistRecord } from '../../domain/entities/Playlist'
+import type { StoredTrack, Track } from '../../domain/entities/Track'
 
 const databaseName = 'sonora-library'
 const storeName = 'tracks'

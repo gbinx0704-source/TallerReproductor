@@ -1,7 +1,7 @@
 import { ListMusic, Plus, Search, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
-import type { Playlist } from '../../../domain/Playlist'
-import type { Track } from '../../../domain/Track'
+import type { Playlist } from '../../../domain/entities/Playlist'
+import type { Track } from '../../../domain/entities/Track'
 
 type PlaylistNameDialogProps = {
   initialName?: string

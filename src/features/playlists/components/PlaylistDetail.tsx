@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, ListMusic, MoreHorizontal, Pause, Play, Plus, Trash2 } from 'lucide-react'
-import type { Playlist, PlaylistDirection } from '../../../domain/Playlist'
-import type { Track } from '../../../domain/Track'
+import type { Playlist, PlaylistDirection } from '../../../domain/entities/Playlist'
+import type { Track } from '../../../domain/entities/Track'
 
 type PlaylistDetailProps = {
   playlist: Playlist

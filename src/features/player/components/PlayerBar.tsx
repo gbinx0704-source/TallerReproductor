@@ -1,8 +1,8 @@
 import type { RefObject } from 'react'
 import { Heart, Music2, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react'
-import type { RepeatMode } from '../../../domain/PlaybackSettings'
-import type { Track } from '../../../domain/Track'
-import type { YouTubeVideo } from '../../../domain/YouTubeVideo'
+import type { RepeatMode } from '../../../domain/settings/PlaybackSettings'
+import type { Track } from '../../../domain/entities/Track'
+import type { YouTubeVideo } from '../../../domain/entities/YouTubeVideo'
 
 type PlayerBarProps = {
   audioRef: RefObject<HTMLAudioElement | null>

@@ -1,5 +1,5 @@
 import { AudioLines, Heart, ListPlus, Music2, Trash2 } from 'lucide-react'
-import type { Track } from '../../../domain/Track'
+import type { Track } from '../../../domain/entities/Track'
 
 type TrackTableProps = {
   tracks: Track[]

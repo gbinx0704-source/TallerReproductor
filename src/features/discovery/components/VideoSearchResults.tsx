@@ -1,5 +1,5 @@
 import { Compass, Play, Search } from 'lucide-react'
-import type { YouTubeVideo } from '../../../domain/YouTubeVideo'
+import type { YouTubeVideo } from '../../../domain/entities/YouTubeVideo'
 
 type VideoSearchResultsProps = {
   query: string

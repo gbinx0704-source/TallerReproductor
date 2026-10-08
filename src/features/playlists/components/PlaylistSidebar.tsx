@@ -1,5 +1,5 @@
 import { ListMusic, Plus, Radio } from 'lucide-react'
-import type { Playlist } from '../../../domain/Playlist'
+import type { Playlist } from '../../../domain/entities/Playlist'
 
 type PlaylistSidebarProps = {
   playlists: Playlist[]

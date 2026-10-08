@@ -35,8 +35,9 @@ The browser must support the selected audio format and have enough local storage
 
 ## Project structure
 
-- `src/domain/` contains tracks, playlists, playback settings, and the doubly linked list used for ordered playback.
-- `src/features/` contains the library, playlists, discovery, and player interface components.
+- `src/app/` contains the app shell and app-level styling; `src/main.tsx` is the entry point.
+- `src/domain/entities/`, `src/domain/collections/`, and `src/domain/settings/` contain models, the doubly linked list, and playback settings.
+- `src/features/` separates discovery, library, player, and playlist interface components.
 - `src/services/storage/` owns browser IndexedDB persistence; `src/services/catalog/` calls the online catalog endpoint.
 - `netlify/functions/` contains the server-side YouTube search endpoint. Its API key stays in Netlify environment variables.
-- `src/App.tsx` coordinates feature state and navigation; `src/App.css` and `src/index.css` define the light visual system.
+- `src/app/App.tsx` coordinates feature state and navigation; `src/app/App.css` and `src/styles/index.css` define the light visual system.

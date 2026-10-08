@@ -1,4 +1,4 @@
-import { DoublyLinkedList } from './DoublyLinkedList'
+import { DoublyLinkedList } from '../collections/DoublyLinkedList'
 
 export type PlaylistRecord = {
   id: string
