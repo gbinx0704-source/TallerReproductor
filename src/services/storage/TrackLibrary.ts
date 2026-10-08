@@ -1,7 +1,9 @@
-import type { StoredTrack, Track } from '../domain/Track'
+import type { PlaylistRecord } from '../../domain/Playlist'
+import type { StoredTrack, Track } from '../../domain/Track'
 
 const databaseName = 'sonora-library'
 const storeName = 'tracks'
+const playlistsStoreName = 'playlists'
 
 function requestResult<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -25,11 +27,14 @@ export class TrackLibrary {
     if (this.databasePromise) return this.databasePromise
 
     this.databasePromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(databaseName, 1)
+      const request = indexedDB.open(databaseName, 2)
       request.onupgradeneeded = () => {
         const database = request.result
         if (!database.objectStoreNames.contains(storeName)) {
           database.createObjectStore(storeName, { keyPath: 'id' })
+        }
+        if (!database.objectStoreNames.contains(playlistsStoreName)) {
+          database.createObjectStore(playlistsStoreName, { keyPath: 'id' })
         }
       }
       request.onsuccess = () => resolve(request.result)
@@ -44,6 +49,28 @@ export class TrackLibrary {
     const database = await this.openDatabase()
     const transaction = database.transaction(storeName, 'readonly')
     return requestResult(transaction.objectStore(storeName).getAll())
+  }
+
+  async getAllPlaylists(): Promise<PlaylistRecord[]> {
+    const database = await this.openDatabase()
+    const transaction = database.transaction(playlistsStoreName, 'readonly')
+    return requestResult(transaction.objectStore(playlistsStoreName).getAll())
+  }
+
+  async savePlaylist(playlist: PlaylistRecord): Promise<void> {
+    const database = await this.openDatabase()
+    const transaction = database.transaction(playlistsStoreName, 'readwrite')
+    const completed = transactionResult(transaction)
+    transaction.objectStore(playlistsStoreName).put(playlist)
+    await completed
+  }
+
+  async removePlaylist(id: string): Promise<void> {
+    const database = await this.openDatabase()
+    const transaction = database.transaction(playlistsStoreName, 'readwrite')
+    const completed = transactionResult(transaction)
+    transaction.objectStore(playlistsStoreName).delete(id)
+    await completed
   }
 
   async addMany(tracks: StoredTrack[]): Promise<void> {
@@ -68,9 +95,23 @@ export class TrackLibrary {
 
   async remove(id: string): Promise<void> {
     const database = await this.openDatabase()
-    const transaction = database.transaction(storeName, 'readwrite')
+    const transaction = database.transaction([storeName, playlistsStoreName], 'readwrite')
     const completed = transactionResult(transaction)
     transaction.objectStore(storeName).delete(id)
+    const playlistsStore = transaction.objectStore(playlistsStoreName)
+    const playlistsRequest = playlistsStore.getAll() as IDBRequest<PlaylistRecord[]>
+    await new Promise<void>((resolve, reject) => {
+      playlistsRequest.onsuccess = () => {
+        playlistsRequest.result.forEach((playlist) => {
+          const trackIds = playlist.trackIds.filter((trackId) => trackId !== id)
+          if (trackIds.length !== playlist.trackIds.length) {
+            playlistsStore.put({ ...playlist, trackIds, updatedAt: Date.now() })
+          }
+        })
+        resolve()
+      }
+      playlistsRequest.onerror = () => reject(playlistsRequest.error ?? new Error('Playlist membership could not be updated.'))
+    })
     await completed
   }
 }

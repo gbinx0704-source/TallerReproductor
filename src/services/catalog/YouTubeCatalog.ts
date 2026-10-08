@@ -1,4 +1,4 @@
-import type { YouTubeVideo } from '../domain/YouTubeVideo'
+import type { YouTubeVideo } from '../../domain/YouTubeVideo'
 
 type YouTubeSearchResponse = {
   items?: YouTubeVideo[]

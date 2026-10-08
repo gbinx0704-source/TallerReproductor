@@ -26,8 +26,17 @@ Online search uses a Netlify Function and results play inside YouTube's embedded
 - Select **Add music** or drop audio files onto the page to import them.
 - Imported audio and track details are stored in the browser's IndexedDB and remain available in that browser profile.
 - Play complete local tracks, seek through them, adjust volume, and move through the doubly linked library in either direction.
+- Create named playlists, add tracks from the library, reorder them, remove songs from a playlist, and play the sequence. Playlists and their order persist in IndexedDB beside the local library.
 - Search by title, artist, or filename. Press `/` to focus search and `Escape` to clear it.
 - Save favorites, shuffle playback, and choose repeat off, repeat all, or repeat one.
 - Remove tracks from the local library with the delete control.
 
 The browser must support the selected audio format and have enough local storage available. Clearing site data removes the saved library. Files are read locally and are not sent to a remote service.
+
+## Project structure
+
+- `src/domain/` contains tracks, playlists, playback settings, and the doubly linked list used for ordered playback.
+- `src/features/` contains the library, playlists, discovery, and player interface components.
+- `src/services/storage/` owns browser IndexedDB persistence; `src/services/catalog/` calls the online catalog endpoint.
+- `netlify/functions/` contains the server-side YouTube search endpoint. Its API key stays in Netlify environment variables.
+- `src/App.tsx` coordinates feature state and navigation; `src/App.css` and `src/index.css` define the light visual system.
